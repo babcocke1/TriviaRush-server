@@ -9,10 +9,10 @@ const server = http.createServer(app);
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
-
+const whitelist = ["http://localhost:3000", "https://trivia-rush-client.herokuapp.com/"]
 const io = require("socket.io")(server, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: whitelist,
       methods: ["GET", "POST"]
     }
   });
