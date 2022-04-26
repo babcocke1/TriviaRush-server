@@ -1,5 +1,3 @@
-const e = require("cors");
-
 const playerToGame = new Map();
 const gidToGame = new Map();
 
@@ -35,19 +33,19 @@ class Game {
         p1.score = 0;
         p2.score = 0;
         // //initialize sockets
-        p1.socket = this.io.sockets.sockets.get(p1.id);
-        p2.socket = this.io.sockets.sockets.get(p2.id);
+        p1.socket = this.io.sockets.sockets.get(p1.pid);
+        p2.socket = this.io.sockets.sockets.get(p2.pid);
         //add players
         this.p1 = p1;
         this.p2 = p2;
         
         // create and add unique game id
-        const pids = [p1.id, p2.id].sort();
+        const pids = [p1.pid, p2.pid].sort();
         this.gid = pids[0] + pids[1];
         
         // map player id to game
-        playerToGame.set(p1.id,this);
-        playerToGame.set(p2.id,this);
+        playerToGame.set(p1.pid,this);
+        playerToGame.set(p2.pid,this);
         
         // map game id to game
         gidToGame.set(this.gid, this);
@@ -58,6 +56,7 @@ class Game {
             this.questions.set(i, createQuestion(i));
         } 
         this.currentQuestion = 0
+        this.isActive = true;
         console.log(this.questions.get(0));
     }
     startGame() {

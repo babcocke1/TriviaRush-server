@@ -6,10 +6,16 @@ const socketio = require('socket.io');
 const Game  = require("./utils/game")
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server);
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
+
+const io = require("socket.io")(server, {
+    cors: {
+      origin: "http://localhost:3000",
+      methods: ["GET", "POST"]
+    }
+  });
 
 let playerQueue = []
 // Run when client connects
@@ -20,7 +26,7 @@ io.on('connection', socket => {
         // check if other player in queue
         // yes: make room, start game
         // no: add player to queue
-        user.id = socket.id;
+        user.pid = socket.id;
         let inQueue = false;
         console.log("inq: ", inQueue);
         inQueue = playerQueue.some(player => {
