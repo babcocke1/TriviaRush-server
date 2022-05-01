@@ -23,7 +23,6 @@ io.on('connection', socket => {
     socket.on("disconnect", m => {
         if (socket.hasOwnProperty('game')) {
             socket.game.endGame(3);
-            console.log("gameover")
         }
     });
     socket.on('message', m => console.log(m))
