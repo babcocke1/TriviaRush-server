@@ -1,11 +1,17 @@
 const playerToGame = new Map();
 const gidToGame = new Map();
-
+const pool = require("./database")
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
   
 const createQuestion = (id) => {
+    // pool.query('SELECT NOW()', (err, res) => {
+    //     console.log(err, res);
+    //   })
+    // console.log(res);
+    // await pool.end()
+
     answer = getRandomInt(4) + 1
     question = {questionText: "choose " + answer + ":"};
     question.id = id;
@@ -57,6 +63,7 @@ class Game {
         this.isActive = true;
     }
     startGame() {
+        if (!this.isActive) return;
         this.p1.socket.join(this.gid) 
         this.p2.socket.join(this.gid)
         console.log(this.p1.socket.id)
@@ -67,6 +74,7 @@ class Game {
         
     }
     getQuestion() {
+        if (!this.isActive) return;
         let question = createQuestion(this.currentQuestion);
         let clientQuestion = {
             you: {name: this.p1.name, score: this.p1.score},
@@ -79,9 +87,11 @@ class Game {
         return clientQuestion;
     }
     sendQuestion(first) {
+        if (!this.isActive) return;
         // console.log(this.io);
         if (this.currentQuestion >= 20) {
-            this.endGame();
+            this.endGame(3) ;
+            return
         }
         let clientQuestion = this.getQuestion();
         console.log(clientQuestion);
@@ -105,17 +115,22 @@ class Game {
             this.p2.socket.emit("question", clientQuestion);
         }
         
-        setTimeout(this.finishQuestion.bind(this), 35000, question);
+        setTimeout(this.finishQuestion.bind(this), 25000, question);
     }
     gameBehavior() {
+        if (!this.isActive) return;
         this.p1.socket.on("answer", (answer) => this.handleAnswer(answer, this.p1, 0));
         this.p2.socket.on("answer", (answer) => this.handleAnswer(answer, this.p2, 1));
         console.log("executed");
     }
     handleAnswer(playerResponse, player, playerNumber) {
-        const q = this.questions[playerResponse.questionId];
+        if (!this.isActive) return;
+        console.log("answer rxd")
+        if (!this.isActive) {
+            socket.emit("game_disconnected")
+        }
+        const q = this.questions[playerResponse.number];
         const result = {};
-        console.log("wtf")
         if (!q.active) 
             return;
         
@@ -124,7 +139,7 @@ class Game {
         console.log(player.score);
         console.log(playerResponse)
         // console.log(q.answers)
-
+        console.log(q.answers[playerResponse.playerChoice])
         console.log(q.answers[playerResponse.playerChoice]);
 
         if (q.answers[playerResponse.playerChoice].correct) 
@@ -149,6 +164,7 @@ class Game {
     }
     //called when both players have answered and at timeout
     finishQuestion(question) {
+        if (!this.isActive) return;
         const points = [0,0]
         console.log("finishing Question");
 
@@ -165,7 +181,7 @@ class Game {
             ;// do nothing
         else if (p1Result == 0) {
             if (p2Result.correct === true) {
-                ++this.p2.score;
+                ++this.p2.score; 
             }
         }
         else if (p2Result == 0) {
@@ -193,20 +209,49 @@ class Game {
 
         ++this.currentQuestion;
         // send score update
+        if (this.p1.score == 5) {
+            this.endGame(1);
+        }
+        else if (this.p2.score == 5) {
+            this.endGame(2);
+        }
+
         this.sendScores();
         
-        setTimeout(this.sendQuestion.bind(this), 10000);
+        setTimeout(this.sendQuestion.bind(this), 2000);
     }
     sendScores() {
+        if (!this.isActive) return;
         console.log("send scores")
-        let score = {you: this.p1.score, opponent: this.p2.score}
+        let score = {you: {
+            name: this.p1.name, score: this.p1.score
+        }, opponent: {
+            name: this.p2.name, score: this.p2.score
+        }}
         this.p1.socket.emit("score", score);
-        score = {you: this.p2.score, opponent: this.p1.score}
+        score = {you: {
+            name: this.p2.name, score: this.p2.score
+        }, opponent: {
+            name: this.p1.name, score: this.p1.score
+        }}
         this.p2.socket.emit("score", score);
     }
-    endGame() {
-        this.gid.emit("gameover", "");
+    endGame(winner) {
+        this.isActive = false;
+        if (winner == 1) {
+            this.p1.socket.emit("gameover", {text:"win"});
+            this.p2.socket.emit("gameover", {text:"lose"});
+        }
+        else if (winner == 2) {
+            this.p2.socket.emit("gameover", {text:"win"});
+            this.p1.socket.emit("gameover", {text:"lose"});
+        }
+        else {
+            this.p1.socket.disconnect();
+            this.p2.socket.disconnect();
+        }
+
     }
 }
 
-module.exports = Game;
+module.exports = Game; 

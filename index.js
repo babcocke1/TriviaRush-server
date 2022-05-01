@@ -6,7 +6,6 @@ const socketio = require('socket.io');
 const Game  = require("./utils/game")
 const app = express();
 const server = http.createServer(app);
-
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
 const whitelist = ["http://localhost:3000", "https://trivia-rush-client.herokuapp.com"]
@@ -21,7 +20,12 @@ let playerQueue = []
 // Run when client connects
 io.on('connection', socket => {
     console.log("CONNNECTION")
-    socket.on("disconnect", m => console.log("DISCONNECT"));
+    socket.on("disconnect", m => {
+        if (socket.hasOwnProperty('game')) {
+            socket.game.endGame(3);
+            console.log("gameover")
+        }
+    });
     socket.on('message', m => console.log(m))
     socket.on("enterQueue", (user) => {
         // check if unique
@@ -50,7 +54,7 @@ io.on('connection', socket => {
             // const s2 = io.sockets.sockets.get(player2.id);
             g = new Game(player1,player2,io)
             g.startGame();
-            
+            socket.game = g;
             // s1.join(gid)
             // s2.join(gid)
             // io.to(gid).emit("my message", gid);
