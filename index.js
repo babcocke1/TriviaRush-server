@@ -17,7 +17,6 @@ const io = require("socket.io")(server, {
   });
 
 let playerQueue = []
-// Run when client connects
 io.on('connection', socket => {
     console.log("CONNNECTION")
     socket.on("disconnect", m => {
@@ -41,7 +40,7 @@ io.on('connection', socket => {
                 return true;
             }
         });
-        console.log("inq: ", inQueue);
+        console.log("inq?: ", inQueue);
         
         if (!inQueue) playerQueue.push(user);
 
