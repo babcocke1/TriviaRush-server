@@ -8,7 +8,7 @@ function getRandomInt(max) {
 const createQuestion = (id) => {
     answer = getRandomInt(4) + 1
     question = {questionText: "choose " + answer + ":"};
-    question.id = id
+    question.id = id;
     answers = [
         { answer: 1, correct: false},
         { answer: 2, correct: false},
@@ -51,29 +51,61 @@ class Game {
         gidToGame.set(this.gid, this);
 
         // this.questions 
-        this.questions = new Map()
-        for (const i of Array(9).keys()) {
-            this.questions.set(i, createQuestion(i));
-        } 
-        this.currentQuestion = 0
+        // start with empty object so this.questions[5] = question #5
+        this.questions = [{}];
+        this.currentQuestion = 0;
         this.isActive = true;
-        console.log(this.questions.get(0));
     }
     startGame() {
         this.p1.socket.join(this.gid) 
         this.p2.socket.join(this.gid)
         console.log(this.p1.socket.id)
         console.log(this.p2.socket.id)
-        this.io.to(this.gid).emit("start", "");
         this.gameBehavior();
-        setTimeout(this.sendQuestion.bind(this), 4000);
+        this.currentQuestion = 1;
+        this.sendQuestion(true);
+        
     }
-    sendQuestion() {
+    getQuestion() {
+        let question = createQuestion(this.currentQuestion);
+        let clientQuestion = {
+            you: {name: this.p1.name, score: this.p1.score},
+            opponent: {name: this.p2.name, score: this.p2.score},
+            text: question.questionText,
+            answers: question.answers,
+            number: question.id
+        }
+        this.questions.push(question);
+        return clientQuestion;
+    }
+    sendQuestion(first) {
         // console.log(this.io);
-        question = this.questions.get(this.currentQuestion);
+        if (this.currentQuestion >= 20) {
+            this.endGame();
+        }
+        let clientQuestion = this.getQuestion();
+        console.log(clientQuestion);
+        console.log(this.questions);
+        let question = this.questions[clientQuestion.number]
+        console.log(question);
         question.active = true;
-        this.io.to(this.gid).emit("question", question);
-        setTimeout(this.finishQuestion.bind(this), 15000, question);
+        
+        if (first) {
+            this.p1.socket.emit("startgame", clientQuestion);
+            let temp = clientQuestion.you
+            clientQuestion.you = clientQuestion.opponent;
+            clientQuestion.opponent = temp;
+            this.p2.socket.emit("startgame", clientQuestion);
+        }
+        else {
+            this.p1.socket.emit("question", clientQuestion);
+            let temp = clientQuestion.you
+            clientQuestion.you = clientQuestion.opponent;
+            clientQuestion.opponent = temp;
+            this.p2.socket.emit("question", clientQuestion);
+        }
+        
+        setTimeout(this.finishQuestion.bind(this), 35000, question);
     }
     gameBehavior() {
         this.p1.socket.on("answer", (answer) => this.handleAnswer(answer, this.p1, 0));
@@ -81,7 +113,7 @@ class Game {
         console.log("executed");
     }
     handleAnswer(playerResponse, player, playerNumber) {
-        const q = this.questions.get(playerResponse.questionId);
+        const q = this.questions[playerResponse.questionId];
         const result = {};
         console.log("wtf")
         if (!q.active) 
@@ -163,7 +195,7 @@ class Game {
         // send score update
         this.sendScores();
         
-        setTimeout(this.sendQuestion.bind(this), 2000);
+        setTimeout(this.sendQuestion.bind(this), 10000);
     }
     sendScores() {
         console.log("send scores")
@@ -172,7 +204,9 @@ class Game {
         score = {you: this.p2.score, opponent: this.p1.score}
         this.p2.socket.emit("score", score);
     }
-
+    endGame() {
+        this.gid.emit("gameover", "");
+    }
 }
 
 module.exports = Game;

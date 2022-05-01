@@ -20,17 +20,20 @@ const io = require("socket.io")(server, {
 let playerQueue = []
 // Run when client connects
 io.on('connection', socket => {
+    console.log("CONNNECTION")
+    socket.on("disconnect", m => console.log("DISCONNECT"));
     socket.on('message', m => console.log(m))
     socket.on("enterQueue", (user) => {
         // check if unique
         // check if other player in queue
         // yes: make room, start game
         // no: add player to queue
+        console.log(user, socket.id);
         user.pid = socket.id;
         let inQueue = false;
         console.log("inq: ", inQueue);
         inQueue = playerQueue.some(player => {
-            if (player.id === user.id) {
+            if (player.id === user.pid) {
                 console.log("player found");
                 return true;
             }
@@ -47,6 +50,7 @@ io.on('connection', socket => {
             // const s2 = io.sockets.sockets.get(player2.id);
             g = new Game(player1,player2,io)
             g.startGame();
+            
             // s1.join(gid)
             // s2.join(gid)
             // io.to(gid).emit("my message", gid);
@@ -54,10 +58,10 @@ io.on('connection', socket => {
             // createGame(player1,player2,gid);
         }
 
-        console.log(playerQueue);
-        // console.log("message", "start timeout test");  
-        // setTimeout(myFunc, 1500, 'funky');
-        // console.log ("message", "end timeout test");
+        console.log("currentQueue", playerQueue);
+        // // console.log("message", "start timeout test");  
+        // // setTimeout(myFunc, 1500, 'funky');
+        // // console.log ("message", "end timeout test");
 
         
     });
