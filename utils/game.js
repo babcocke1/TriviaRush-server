@@ -5,28 +5,39 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
   
-const createQuestion = (id) => {
+const createQuestion = (id, game, first) => {
     // pool.query('SELECT NOW()', (err, res) => {
     //     console.log(err, res);
     //   })
     // console.log(res);
-    // await pool.end()
-
-    answer = getRandomInt(4) + 1
-    question = {questionText: "choose " + answer + ":"};
-    question.id = id;
-    answers = [
-        { answer: 1, correct: false},
-        { answer: 2, correct: false},
-        { answer: 3, correct: false},
-        { answer: 4, correct: false}
-    ]
-    question.playerAnswers = [0,0]
-    question.active = false;
-    answers[answer-1].correct = true;
-    question.answers = answers;
-    // console.log(question);
-    return question;
+    // await pool.end ()
+    // console.log(pool);
+    pool.query(
+        "SELECT * from questions ORDER BY RANDOM() limit 1")
+        .then(res => {
+            result = res.rows[0]
+            console.log(res.rows)
+            question = {questionText: result.question};
+            question.id = id;
+            answers = [
+                { answer: result.answer1, correct: result.correct1},
+                { answer: result.answer2, correct: result.correct2},
+                { answer: result.answer3, correct: result.correct3},
+                { answer: result.answer4, correct: result.correct4}
+            ]
+            question.playerAnswers = [0,0]
+            question.active = false;
+            question.answers = answers;
+            // console.log(question);
+            console.log(question)
+            game.sendQuestion(first,question)
+            return question;
+            
+        })
+        .catch(e => {
+                console.error('Error executing query', e.stack);
+                game.endGame();
+        })
 }
 
 
@@ -63,6 +74,7 @@ class Game {
         this.isActive = true;
     }
     startGame() {
+        console.log("questionTime");
         if (!this.isActive) return;
         this.p1.socket.join(this.gid) 
         this.p2.socket.join(this.gid)
@@ -70,12 +82,13 @@ class Game {
         console.log(this.p2.socket.id)
         this.gameBehavior();
         this.currentQuestion = 1;
-        this.sendQuestion(true);
+        console.log("questionTime");
+        createQuestion(1, this, true);
         
     }
-    getQuestion() {
+    getClientQuestion(question) {
         if (!this.isActive) return;
-        let question = createQuestion(this.currentQuestion);
+        console.log(question)
         let clientQuestion = {
             you: {name: this.p1.name, score: this.p1.score},
             opponent: {name: this.p2.name, score: this.p2.score},
@@ -86,17 +99,18 @@ class Game {
         this.questions.push(question);
         return clientQuestion;
     }
-    sendQuestion(first) {
+    sendQuestion(first,question) {
         if (!this.isActive) return;
         // console.log(this.io);
         if (this.currentQuestion >= 20) {
             this.endGame(3) ;
             return
         }
-        let clientQuestion = this.getQuestion();
+        console.log("questionTime")
+        let clientQuestion = this.getClientQuestion(question);
         console.log(clientQuestion);
         console.log(this.questions);
-        let question = this.questions[clientQuestion.number]
+        console.log("num", clientQuestion.number)
         console.log(question);
         question.active = true;
         
@@ -218,7 +232,9 @@ class Game {
 
         this.sendScores();
         
-        setTimeout(this.sendQuestion.bind(this), 2000);
+        setTimeout(() => {
+            createQuestion(this.currentQuestion, this, false);
+        }, 2000);
     }
     sendScores() {
         if (!this.isActive) return;
@@ -253,5 +269,4 @@ class Game {
 
     }
 }
-
 module.exports = Game; 
